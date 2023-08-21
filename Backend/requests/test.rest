@@ -1,10 +1,7 @@
-GET http://localhost:3000/api/business/test
+POST http://localhost:3000/api/business/
 Content-Type: application/json
 
 {
     "name": "Oyaji Sushi",
-    "address1": "10341 Yonge Street",
-    "city": "Richmond Hill",
-    "state": "ON",
-    "country": "CA"
+    "location": "Richmond Hill"
 }
