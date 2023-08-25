@@ -58,7 +58,6 @@ interface yelpApi {
 
 interface yelpReview {
     id: string;
-    userId: string;
     user: {
         link: string;
         src: string;
