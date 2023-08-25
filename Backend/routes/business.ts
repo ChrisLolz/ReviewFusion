@@ -9,6 +9,8 @@ router.get('/reviews', asyncHandler(businessController.getAllReviews));
 router.get('/:id', asyncHandler(businessController.getBusinessById));
 router.get('/:id/reviews', asyncHandler(businessController.getReviewsById));
 router.get('/:id/ratings', asyncHandler(businessController.getRatings));
+router.get('/:id/average', asyncHandler(businessController.getAverageRating));
+
 router.post('/',  asyncHandler(businessController.addBusiness));
 
 export default router;

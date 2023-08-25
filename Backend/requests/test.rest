@@ -2,6 +2,6 @@ POST http://localhost:3000/api/business/
 Content-Type: application/json
 
 {
-    "name": "Oyaji Sushi",
-    "location": "Richmond Hill"
+    "name": "Katz's",
+    "location": "New York"
 }

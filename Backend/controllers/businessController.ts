@@ -1,8 +1,13 @@
 import { Request, Response } from 'express';
 import Business from '../models/business';
 import Review from '../models/review';
+import axios from 'axios';
 import * as cheerio from 'cheerio';
-import * as puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import mongoose from 'mongoose';
+
+puppeteer.use(StealthPlugin());
 
 const options = {
     method: 'GET',
@@ -82,7 +87,9 @@ export const getBusinesses =  async (req: Request, res: Response) => {
 };
 
 export const getAllReviews = async (req: Request, res: Response) => {
-    const reviews = await Review.find({});
+    const source = req.query.source;
+    const query = source ? {source: source} : {};
+    const reviews = await Review.find(query);
     res.status(200).json(reviews);
 };
 
@@ -92,21 +99,39 @@ export const getBusinessById = async (req: Request, res: Response) => {
 };
 
 export const getReviewsById = async (req: Request, res: Response) => {
-    const reviews = await Review.find({business: req.params.id});
+    const source = req.query.source;
+    const query = source ? {business: req.params.id, source: source} : {business: req.params.id};
+    const reviews = await Review.find(query);
     res.status(200).json(reviews);
 };
 
 export const getRatings = async (req: Request, res: Response) => {
-    const business = await Business.find({_id: req.params.id}, {ratings: 1});
+    const source = req.query.source;
+    const query = source ? {"_id": req.params.id, "ratings.source": source} : {"_id": req.params.id};
+    const property = source ? {"ratings.$": 1} : {"ratings": 1};
+    const business = await Business.find(query, property);
     res.status(200).json(business);
+};
+
+export const getAverageRating = async (req: Request, res: Response) => {
+    const businessId = new mongoose.Types.ObjectId(req.params.id);
+    const average = await Business.aggregate([
+        {$match: {"_id": businessId}},
+        {$unwind: "$ratings"},
+        {$group: {
+            _id: "$_id", 
+            average: {$avg: "$ratings.rating"}
+        }}
+    ]);
+    res.status(200).json(average[0].average);
 };
 
 export const addBusiness = async (req: Request<unknown, unknown, businessParams>, res: Response) => {
     const name = req.body.name.replace(" ", "%20");
     const location = req.body.location.replace(" ", "%20");
     const URL = api+`/businesses/search?location=${location}&term=${name}&sort_by=best_match&limit=50`;
-    const response = await fetch(URL, options);
-    const data = await response.json() as YelpResponse;
+    const response = await axios.get(URL, options);
+    const data = response.data as YelpResponse;
     const yelpID = data.businesses[0].id;
     const business = new Business({
         name: data.businesses[0].name,
@@ -121,50 +146,60 @@ export const addBusiness = async (req: Request<unknown, unknown, businessParams>
     const requests = [];
     requests.push(addYelpBusiness(yelpID, mongoID));
     requests.push(addGoogleBusiness(mongoID));
+    requests.push(addTripAdvisorBusiness(mongoID));
     await Promise.all(requests);
     res.status(200).end();
 };
 
 const addYelpBusiness = async (yelpID: string, mongoID: string) => {
-    const url = "https://www.yelp.com/biz/"+yelpID+"/review_feed?rl=en&q=&sort_by=relevance_desc&start=";
-    const response = await fetch(url+"0", {
-        headers: {
-            "Accept-Encoding": "*",
-        }
-    });
-    const data = await response.json() as yelpApi;
-    const totalReviews = Math.floor(data.pagination.totalResults/10)*10;
-    const requests = [];
-    for (let i = 10; i <= totalReviews; i+=10) {
-        requests.push(fetch(url+i, {
-            headers: {
-                "Accept-Encoding": "*",
-            }
-        }).then(response => response.json())); 
-    }
-    const responses = await Promise.all(requests) as yelpApi[];
-    const reviews = data.reviews.concat(...responses.map(response => response.reviews));
-    const rating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
     const business =  await Business.findById(mongoID);
     if (business === null) {
         return;
     }
+    const url = "https://www.yelp.com/biz/"+yelpID+"/review_feed?rl=en&q=&sort_by=date_desc&start=";
+    const response = await axios.get<yelpApi>(url+"0", {
+        headers: {
+            "Accept": "application/json",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-US,en;q=0.9",
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+        }
+    });
+    const data = response.data;
+    const totalReviews = data.pagination.totalResults > 300 ? 300 : data.pagination.totalResults;
+    const requests = [];
+    for (let i = 0; i < Math.ceil(totalReviews/10); i++) {
+        const promise = (async () => {
+            const response = await axios<yelpApi>(url+i*10, {
+                headers: {
+                "Accept": "application/json",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": "en-US,en;q=0.9",
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'
+                }
+            });
+            for (const review of response.data.reviews) {
+                const newReview = new Review({
+                    source: "Yelp",
+                    name: review.user.markupDisplayName,
+                    date: review.localizedDate,
+                    business: business._id,
+                    rating: review.rating,
+                    comment: review.comment.text.replace(/\s*<br\s*\/?>\s*/g, '\n')
+                });
+                await newReview.save();
+                business.reviews.push(newReview._id);
+            }
+        })();
+        requests.push(promise);
+    }
+    await Promise.all(requests);
+    const reviews = await Review.find({business: business._id, source: "Yelp"});
+    const rating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
     business.ratings.push({
         source: "Yelp",
         rating: rating
     });
-    const reviewPromises = reviews.map(async review => {
-        const newReview = new Review({
-            source: "Yelp",
-            name: review.user.markupDisplayName,
-            business: business._id,
-            rating: review.rating,
-            comment: review.comment.text
-        });
-        await newReview.save();
-        business.reviews.push(newReview._id);
-    });
-    await Promise.all(reviewPromises);
     await business.save();
 };
 
@@ -192,15 +227,19 @@ const addGoogleBusiness = async (mongoID: string) => {
     if (reviewCount === null) {
         return;
     }
-    if (reviewCount > 1000) {
-        reviewCount = 1000;
+    if (reviewCount > 300) {
+        reviewCount = 300;
     }
     const requests = [];
     for (let i = 0; i < Math.ceil(reviewCount/10); i++) {
-        const promise = fetch(`https://www.google.com/async/reviewDialog?async=feature_id:${featureID},review_source:All%20reviews,sort_by:qualityScore,is_owner:false,filter_text:,associated_topic:,next_page_token:${nextPageTokens[i]},async_id_prefix:,_pms:s,_fmt:pc`)
-        .then(response => response.text())
-        .then(text => {
-            const $ = cheerio.load(text);
+        const promise = (async () => {
+            const response = await axios.get<string>(`https://www.google.com/async/reviewDialog?async=feature_id:${featureID},review_source:All%20reviews,sort_by:newestFirst,is_owner:false,filter_text:,associated_topic:,next_page_token:${nextPageTokens[i]},async_id_prefix:,_pms:s,_fmt:pc`, {
+                headers: {
+                    "Accept-Encoding": "gzip, deflate, br",
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'
+                }
+            });
+            const $ = cheerio.load(response.data);
             const reviewDiv = $('div[class="WMbnJf vY6njf gws-localreviews__google-review"]').toArray();
             const reviewPromises = reviewDiv.map(review => {
                 let comment: string;
@@ -211,18 +250,38 @@ const addGoogleBusiness = async (mongoID: string) => {
                     reviewTextElement.find('div.k8MTF').remove();
                     comment = reviewTextElement.text().trim();
                 }
+                const relativeDate = $(review).find('.dehysf').html() || "";
+                const now = new Date();
+                const matches = relativeDate.match(/(\w+)\s*(\w+)\s+ago/);
+                if (matches) {
+                    const quantity = isNaN(parseInt(matches[1])) ? 1 : parseInt(matches[1]);
+                    const unit = matches[2];
+                    if (unit.includes("second")) {
+                        now.setSeconds(now.getSeconds() - quantity);
+                    } else if (unit.includes("minute")) {
+                        now.setMinutes(now.getMinutes() - quantity);
+                    } else if (unit.includes("hour")) {
+                        now.setHours(now.getHours() - quantity);
+                    } else if (unit.includes("day")) {
+                        now.setDate(now.getDate() - quantity);
+                    } else if (unit.includes("week")) {
+                        now.setDate(now.getDate() - quantity * 7);
+                    }
+                }
+                const timeAgo = now.toLocaleDateString('en-US', {year: '2-digit', month: '2-digit', day: '2-digit'});
                 const newReview = new Review({
                     source: "Google",
                     name: $(review).find('div[class="TSUbDb"]').text(),
+                    date: timeAgo,
                     business: business._id,
                     rating: $(review).find('span[class="lTi8oc z3HNkc"]').attr('aria-label')?.split(" ")[1] || "",
-                    comment: comment
+                    comment: comment.replace(/\s*<br\s*\/?>\s*/g, '\n')
                 });
                 business.reviews.push(newReview._id);
                 return newReview.save();
             });
             return Promise.all(reviewPromises);
-        });
+        })();
         requests.push(promise);
     }
     await Promise.all(requests);
@@ -230,6 +289,99 @@ const addGoogleBusiness = async (mongoID: string) => {
     const rating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
     business.ratings.push({
         source: "Google",
+        rating: rating
+    });
+    await business.save();
+};
+
+export const addTripAdvisorBusiness = async (mongoID: string) => {
+    const business = await Business.findById(mongoID);
+    if (!business) {
+      return;
+    }
+    let response = await axios.get<string>("https://www.google.com/search?q="+business.name+" "+business.address+" tripadvisor");
+    let $ = cheerio.load(response.data);
+    const url = $('div.egMi0.kCrYT').find('a').attr('href')?.split('&')[0].slice(7).replace('.html', '');
+
+    response = await axios.get<string>(url+".html", {
+        headers: {
+            "Accept-Encoding": "gzip, deflate, br",
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Origin': 'https://www.tripadvisor.ca',
+        }
+    });
+    $ = cheerio.load(response.data);
+    let reviewCount = parseInt($('.item[data-value="en"]').first().find('span.count').text().replace(/[^0-9]/g, ''));
+    if (reviewCount > 300) {
+        reviewCount = 300;
+    }
+    const requests = [];
+    const reviewIds: string[] = [];
+    for (let i=0; i<Math.ceil(reviewCount/15); i++) {
+        const promise = (async () => {
+            const response = await axios.get<string>(url+"-or"+i*15+".html", {
+                headers: {
+                    "Accept-Encoding": "gzip, deflate, br",
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Origin': 'https://www.tripadvisor.ca',
+                }
+            });
+            const $ = cheerio.load(response.data);
+            reviewIds.push(...$('.review-container').toArray().map(review => $(review).attr('data-reviewid') || ""));
+        })();
+        requests.push(promise);
+    }
+    await Promise.all(requests);
+
+    const data = "reviews="+reviewIds.map(id => id).join('%2C');
+    
+    response = await axios.post<string>("https://www.tripadvisor.ca/OverlayWidgetAjax?Mode=EXPANDED_HOTEL_REVIEWS_RESP&metaReferer=Restaurant_Review", data, {
+        headers: {
+            "Accept-Encoding": "gzip, deflate, br",
+            'User-Agent': 'PostmanRuntime/7.26.10',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Origin': 'https://www.tripadvisor.ca',
+        }
+    });
+    $ = cheerio.load(response.data);
+    const reviewDivs = $('.reviewSelector').toArray();
+    const reviewPromises = [];
+    for (const reviewDiv of reviewDivs) {
+        const promise = (async () => {
+            let rating = 0;
+            if ($(reviewDiv).find('.ui_bubble_rating.bubble_50').length) {
+                rating = 5;
+            } else if ($(reviewDiv).find('.ui_bubble_rating.bubble_40').length) {
+                rating = 4;
+            } else if ($(reviewDiv).find('.ui_bubble_rating.bubble_30').length) {
+                rating = 3;
+            } else if ($(reviewDiv).find('.ui_bubble_rating.bubble_20').length) {
+                rating = 2;
+            } else if ($(reviewDiv).find('.ui_bubble_rating.bubble_10').length) {
+                rating = 1;
+            }
+            const date = $(reviewDiv).find('.ratingDate').attr('title') || "";
+            const newDate = new Date(date).toLocaleDateString('en-US', {year: '2-digit', month: '2-digit', day: '2-digit'});
+            const newReview = new Review({
+                source: "TripAdvisor",
+                name: $(reviewDiv).find('.info_text.pointer_cursor > div:first-child').text(),
+                date: newDate,
+                business: business._id,
+                rating: rating,
+                comment: $(reviewDiv).find('.partial_entry').html()?.replace(/\s*<br\s*\/?>\s*/g, '\n')
+            });
+            business.reviews.push(newReview._id);
+            await newReview.save();
+        })();
+        reviewPromises.push(promise);
+    }
+    await Promise.all(reviewPromises);
+    const reviews = await Review.find({business: business._id, source: "TripAdvisor"});
+    const rating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
+    business.ratings.push({
+        source: "TripAdvisor",
         rating: rating
     });
     await business.save();
