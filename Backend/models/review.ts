@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 interface Review {
     source: string;
     name: string;
+    date: string;
     business: mongoose.Types.ObjectId;
     rating: number;
     comment: string;
@@ -11,6 +12,7 @@ interface Review {
 const reviewSchema =  new mongoose.Schema<Review>({
     source: { type: String, required: true },
     name: { type: String, required: true },
+    date: { type: String, required: true },
     business: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Business",

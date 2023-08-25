@@ -3,7 +3,6 @@ import morgan from 'morgan';
 import mongoose, { ConnectOptions } from 'mongoose';
 import 'dotenv/config';
 
-import yelpRouter from './routes/yelp';
 import businessRouter from './routes/business';
 
 const app = express();
@@ -24,7 +23,6 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 app.use('/api/business', businessRouter);
-app.use('/api/business/yelp', yelpRouter);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
