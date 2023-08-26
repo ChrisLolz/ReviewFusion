@@ -1,0 +1,42 @@
+Header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background-color: #FFFCF9;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+nav {
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+}
+
+h1 {
+    font-weight: 100;
+    font-size: 2.5rem;
+    color: #CD533B;
+    margin: 0;
+}
+
+button {
+    color: #FFFCF9;
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    font-weight: 100;
+    cursor: pointer;
+    margin-left: 1rem;
+}
+
+button.sign-up {
+    background-color: #13262F;
+}
+
+button.sign-in {
+    background-color: #CD533B;
+}
