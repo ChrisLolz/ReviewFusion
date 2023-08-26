@@ -1,10 +1,13 @@
-import { useState } from 'react'
 import Header from './components/Header/Header'
+import Homepage from './components/Homepage/Homepage'
 
-function App() {
+const App = () => {
 
   return (
-    <Header></Header>
+    <>
+      <Header></Header>
+      <Homepage></Homepage>
+    </>
   )
 }
 
