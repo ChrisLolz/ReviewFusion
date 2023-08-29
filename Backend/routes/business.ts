@@ -4,6 +4,7 @@ import * as businessController from '../controllers/businessController';
 
 const router = Router();
 
+router.get('/search', asyncHandler(businessController.search));
 router.get('/', asyncHandler(businessController.getBusinesses));
 router.get('/reviews', asyncHandler(businessController.getAllReviews));
 router.get('/:id', asyncHandler(businessController.getBusinessById));

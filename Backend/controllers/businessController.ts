@@ -80,6 +80,23 @@ interface yelpReview {
     }[]
 }
 
+export const search = async (req: Request<unknown, unknown, unknown, {name: string, longitude: number, latitude: number, location: string}>, res: Response) => {
+    console.log('backend received');
+    const name = req.query.name;
+    const longitude = req.query.longitude;
+    const latitude = req.query.latitude;
+    const location = req.query.location;
+    if (longitude === undefined || latitude === undefined) {
+        const response = await axios.get(api+`/businesses/search?location=${location}&term=${name}&sort_by=best_match&limit=50`, options);
+        res.status(200).json(response.data);
+    } else if (location === undefined) {
+        const response = await axios.get(api+`/businesses/search?longitude=${longitude}&latitude=${latitude}&term=${name}&sort_by=best_match&limit=50`, options);
+        res.status(200).json(response.data);
+    } else {
+        res.status(400).send("Invalid query parameters");
+    }
+};
+
 export const getBusinesses =  async (req: Request, res: Response) => {
     const businesses = await Business.find({});
     res.status(200).json(businesses);

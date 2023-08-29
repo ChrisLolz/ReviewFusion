@@ -1,0 +1,43 @@
+#search-bar {
+    display: flex;
+}
+
+#search-bar input {
+    border-radius: 0.3rem;
+    padding: 0.5rem;
+    font-size: 1.2rem;
+    border: 0.1rem solid #CD533B;
+    outline: none;
+    width: 20vw;
+    padding: 0.9rem;
+}
+
+header #search-bar {
+    height: 3rem;
+}
+
+#search-bar input::placeholder {
+    color: #888888c4;
+}
+
+#search-bar #restaurant {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: 0.1rem solid #c4bebd4b;
+}
+
+#search-bar #location {
+    border-radius: 0;
+    border-left: 0.1rem solid #c4bebd4b;
+}
+
+#search-button {
+    border-radius: 0.3rem;
+    border-bottom-left-radius: 0;
+    border-top-left-radius: 0;
+    background-color: #CD533B;
+    margin: 0;
+    width: 7rem;
+    font-size: 1.2rem;
+    padding: 0;
+}

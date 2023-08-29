@@ -1,4 +1,4 @@
-main {
+#Homepage {
     background-image: url('https://i.imgur.com/Xlc1SBv.jpg');
     background-size: cover;
     background-repeat: no-repeat;
@@ -9,50 +9,10 @@ main {
     align-items: center;
 }
 
-main h2 {
+#Homepage h2 {
     font-size: 2.5rem;
     color: #ffffff;
     font-weight: 700;
     margin-bottom: 2rem;
     text-shadow: #000000 0.1rem 0.1rem 0.3rem;
-}
-
-#search-bar {
-    display: flex;
-}
-
-main input {
-    border-radius: 0.3rem;
-    padding: 0.5rem;
-    font-size: 1.2rem;
-    border: 0.1rem solid #CD533B;
-    outline: none;
-    width: 20vw;
-    padding: 0.9rem;
-}
-
-main input::placeholder {
-    color: #888888c4;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-#restaurant {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-    border-right: 0.1rem solid #c4bebd4b;
-}
-
-#location {
-    border-radius: 0;
-    border-left: 0.1rem solid #c4bebd4b;
-}
-
-#search-button {
-    border-radius: 0.3rem;
-    border-bottom-left-radius: 0;
-    border-top-left-radius: 0;
-    background-color: #CD533B;
-    margin: 0;
-    width: 7rem;
-    font-size: 1.2rem;
 }

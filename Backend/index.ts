@@ -1,5 +1,6 @@
 import express from 'express';
 import morgan from 'morgan';
+import cors from 'cors';
 import mongoose, { ConnectOptions } from 'mongoose';
 import 'dotenv/config';
 
@@ -19,6 +20,7 @@ mongoose.connect(process.env.MONGODB_URI as string, {
         console.log(err);
     });
 
+app.use(cors({origin: 'http://localhost:5173'}));
 app.use(morgan('dev'));
 app.use(express.json());
 
