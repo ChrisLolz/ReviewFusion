@@ -1,0 +1,29 @@
+#paginator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+#paginator > * {
+  height: 3rem;
+  width: 3rem;
+  padding: 0rem;
+  background-color: #fff;
+  color: #000;
+  font-weight: 400;
+  border: 0.1rem solid #c4bebd8f;
+  border-radius: 50%;
+  margin: 0 0.3rem;
+  cursor: pointer;
+  aspect-ratio: 1;
+}
+
+#current-page {
+  font-weight: bold;
+  border: 0.1rem solid #CD533B;
+}
+
+.first-last {
+  font-size: 1rem;
+}

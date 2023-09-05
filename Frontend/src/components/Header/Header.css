@@ -5,6 +5,7 @@ Header {
     background-color: #FFFCF9;
     padding-left: 1rem;
     padding-right: 1rem;
+    border-bottom: 0.1rem solid #c4bebd4b;
 }
 
 nav {
@@ -28,6 +29,8 @@ Header h1 a:hover {
 Header button {
     padding: 0.8rem;
     width: 6.5rem;
+    margin-left: 1rem;
+    border-radius: 0.5rem;
 }
 
 #sign-up {

@@ -1,0 +1,53 @@
+aside {
+    margin-right: 2rem;
+    margin-left: 2rem;
+}
+
+#price {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 1rem;
+    border-bottom: 0.1rem solid #c4bebd8f;
+}
+
+#price span {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+#price-buttons {
+    display: flex;
+    flex-direction: row;
+}
+
+#price-buttons button {
+    flex: 1;
+    width: 4rem;
+    padding-right: 0;
+    padding-left: 0;
+    background-color: white;
+    color: black;
+    border: 0.1rem solid #c4bebd8f;
+    border-right: 0;
+}
+
+#price-buttons button:first-child {
+    border-left: 0.1rem solid #c4bebd8f;
+    border-top-left-radius: 0.3rem;
+    border-bottom-left-radius: 0.3rem;
+}
+
+#price-buttons button:last-child {
+    border-right: 0.1rem solid #c4bebd8f;
+    border-top-right-radius: 0.3rem;
+    border-bottom-right-radius: 0.3rem;
+}
+
+#price-buttons button:hover {
+    background-color: #c4bebd8f;
+    border-right: 0.1rem solid #c4bebd8f;
+}
+
+#price-buttons button:hover + button {
+    border-left: 0;
+}

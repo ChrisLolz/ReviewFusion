@@ -6,6 +6,7 @@ import * as cheerio from 'cheerio';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import mongoose from 'mongoose';
+import randUserAgent from 'rand-user-agent';
 
 puppeteer.use(StealthPlugin());
 
@@ -25,17 +26,23 @@ export interface businessParams {
 }
 
 interface YelpBusiness {
-    id: string;
-    name: string;
-    image_url: string;
+    id: string,
+    name: string,
+    image_url: string,
+    rating: number,
+    price: string,
+    googleRating: number | null,
+    tripAdvisorRating: number | null,
     location: {
+        display_address: string[]
         address1: string;
         city: string;
     }
 }
 
 interface YelpResponse {
-    businesses: YelpBusiness[];
+    businesses: YelpBusiness[],
+    total: number,
 }
 
 interface yelpApi {
@@ -80,21 +87,39 @@ interface yelpReview {
     }[]
 }
 
-export const search = async (req: Request<unknown, unknown, unknown, {name: string, longitude: number, latitude: number, location: string}>, res: Response) => {
-    console.log('backend received');
+export const search = async (req: Request<unknown, unknown, unknown, {name: string, longitude: number, latitude: number, location: number, offset: number}>, res: Response) => {
     const name = req.query.name;
-    const longitude = req.query.longitude;
-    const latitude = req.query.latitude;
-    const location = req.query.location;
-    if (longitude === undefined || latitude === undefined) {
-        const response = await axios.get(api+`/businesses/search?location=${location}&term=${name}&sort_by=best_match&limit=50`, options);
-        res.status(200).json(response.data);
-    } else if (location === undefined) {
-        const response = await axios.get(api+`/businesses/search?longitude=${longitude}&latitude=${latitude}&term=${name}&sort_by=best_match&limit=50`, options);
-        res.status(200).json(response.data);
-    } else {
-        res.status(400).send("Invalid query parameters");
+    const longitude = req.query.longitude || "";
+    const latitude = req.query.latitude || "";
+    const location = req.query.location || "";
+    const offset = req.query.offset > 990 ? 990 : req.query.offset;
+    const response = await axios.get<YelpResponse>(api+`/businesses/search?location=${location}&longitude=${longitude}&latitude=${latitude}&term=${name}&sort_by=best_match&limit=10&offset=${offset}`, options);
+    for (let i=0; i<response.data.businesses.length; i++) {
+        const business = response.data.businesses[i];
+        const search = await axios.get<string>(`https://google.com/search?q=${business.name.replace('&', 'and')} ${business.location.display_address}&num=20&gbv=1`, {
+            headers: {
+                'Accept-Encoding': 'gzip, deflate, br',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+            }
+        });
+        const $ = cheerio.load(search.data);
+        business.googleRating = Number($('div.BNeawe.tAd8D.AP7Wnd span.oqSTJd').text());
+        if (business.googleRating === 0) {
+            business.googleRating = null;
+        }
+        $('div.Gx5Zad.fP1Qef.xpd.EtOod.pkphOe').each((i, el) => {
+            if ($(el).find('a').attr('href')?.includes('/Restaurant_Review')) {
+                business.tripAdvisorRating = Number($(el).find('span.oqSTJd').text());
+                if (business.tripAdvisorRating === 0) {
+                    business.tripAdvisorRating = null;
+                }
+            }
+        });
+        //Google search is done synchronously and delayed to avoid getting blocked
+        setTimeout(() => {}, Math.random() * (5000-3000+1) + 3000);
     }
+    response.data.total = response.data.total > 990 ? 990 : response.data.total;
+    res.status(200).json(response.data);
 };
 
 export const getBusinesses =  async (req: Request, res: Response) => {
@@ -178,7 +203,7 @@ const addYelpBusiness = async (yelpID: string, mongoID: string) => {
             "Accept": "application/json",
             "Accept-Encoding": "gzip, deflate, br",
             "Accept-Language": "en-US,en;q=0.9",
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+            'User-Agent': randUserAgent('desktop')
         }
     });
     const data = response.data;
@@ -191,7 +216,7 @@ const addYelpBusiness = async (yelpID: string, mongoID: string) => {
                 "Accept": "application/json",
                 "Accept-Encoding": "gzip, deflate, br",
                 "Accept-Language": "en-US,en;q=0.9",
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'
+                'User-Agent': randUserAgent('desktop')
                 }
             });
             for (const review of response.data.reviews) {
@@ -252,7 +277,7 @@ const addGoogleBusiness = async (mongoID: string) => {
             const response = await axios.get<string>(`https://www.google.com/async/reviewDialog?async=feature_id:${featureID},review_source:All%20reviews,sort_by:newestFirst,is_owner:false,filter_text:,associated_topic:,next_page_token:${nextPageTokens[i]},async_id_prefix:,_pms:s,_fmt:pc`, {
                 headers: {
                     "Accept-Encoding": "gzip, deflate, br",
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'
+                    'User-Agent': randUserAgent('desktop')
                 }
             });
             const $ = cheerio.load(response.data);
@@ -322,11 +347,12 @@ export const addTripAdvisorBusiness = async (mongoID: string) => {
     response = await axios.get<string>(url+".html", {
         headers: {
             "Accept-Encoding": "gzip, deflate, br",
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+            'User-Agent': randUserAgent('desktop'),
             'Accept-Language': 'en-US,en;q=0.9',
             'Origin': 'https://www.tripadvisor.ca',
         }
     });
+
     $ = cheerio.load(response.data);
     let reviewCount = parseInt($('.item[data-value="en"]').first().find('span.count').text().replace(/[^0-9]/g, ''));
     if (reviewCount > 300) {
@@ -335,11 +361,12 @@ export const addTripAdvisorBusiness = async (mongoID: string) => {
     const requests = [];
     const reviewIds: string[] = [];
     for (let i=0; i<Math.ceil(reviewCount/15); i++) {
+
         const promise = (async () => {
             const response = await axios.get<string>(url+"-or"+i*15+".html", {
                 headers: {
                     "Accept-Encoding": "gzip, deflate, br",
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+                    'User-Agent': randUserAgent('desktop'),
                     'Accept-Language': 'en-US,en;q=0.9',
                     'Origin': 'https://www.tripadvisor.ca',
                 }

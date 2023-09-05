@@ -50,9 +50,9 @@ const SearchBar = () => {
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (location === 'Current Location' && userCoords) {
-            navigate(`/search?name=${restaurant}&longitude=${userCoords.longitude}&latitude=${userCoords.latitude}`);
+            navigate(`/search?name=${restaurant}&longitude=${userCoords.longitude}&latitude=${userCoords.latitude}&offset=0`);
         } else {
-            navigate(`/search?name=${restaurant}&location=${location}`);
+            navigate(`/search?name=${restaurant}&location=${location}&offset=0`);
         }
     }
 

@@ -1,0 +1,9 @@
+#results {
+    display: flex;
+    flex-direction: row;
+    margin-top: 1.5rem;
+}
+
+#results h2 {
+    margin: 0;
+}

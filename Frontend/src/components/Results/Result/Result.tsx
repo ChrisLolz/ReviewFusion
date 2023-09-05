@@ -1,3 +1,5 @@
+import './Result.css'
+
 interface Business {
     id: string,
     name: string,
@@ -7,18 +9,26 @@ interface Business {
     location: {
         display_address: string[],
     },
-    distance: number
+    distance: number,
+    googleRating: number,
+    tripAdvisorRating: number
 }
 
 const Result = ( { business }: {business: Business} ) => {
     return (
-        <li>
-            <h3>{business.name}</h3>
+        <li className='result'>
             <img src={business.image_url} alt={business.name} />
-            <p>{business.rating} stars</p>
-            <p>{business.price}</p>
-            <p>{business.location.display_address.join(', ')}</p>
-            <p>{business.distance} meters away</p>
+            <div className='businessContent'>
+                <h3>{business.name}</h3>
+                <div className='rating'>
+                    <div className='yelpRating'>Yelp: {business.rating} stars</div>
+                    {business.googleRating && <div className='googleRating'>Google: {business.googleRating} stars</div>}
+                    {business.tripAdvisorRating && <div className='tripAdvisorRating'>TripAdvisor: {business.tripAdvisorRating} stars</div>}
+                </div>
+                <div className='price'>{business.price}</div>
+                <div className='location'>{business.location.display_address.join(', ')}</div>
+                <div className='distance'>{(business.distance / 1609.344).toFixed(2)} miles</div>
+            </div>
         </li>
     )
 }
