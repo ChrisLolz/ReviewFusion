@@ -30,14 +30,14 @@ interface YelpBusiness {
     name: string,
     image_url: string,
     rating: number,
+    review_count: number,
     price: string,
-    googleRating: number | null,
-    tripAdvisorRating: number | null,
     location: {
         display_address: string[]
         address1: string;
         city: string;
-    }
+    },
+    ratings: Record<string, {rating: number, count: number}>,
 }
 
 interface YelpResponse {
@@ -96,6 +96,7 @@ export const search = async (req: Request<unknown, unknown, unknown, {name: stri
     const response = await axios.get<YelpResponse>(api+`/businesses/search?location=${location}&longitude=${longitude}&latitude=${latitude}&term=${name}&sort_by=best_match&limit=10&offset=${offset}`, options);
     for (let i=0; i<response.data.businesses.length; i++) {
         const business = response.data.businesses[i];
+        business.ratings = { Yelp: {rating: business.rating, count: business.review_count} };
         const search = await axios.get<string>(`https://google.com/search?q=${business.name.replace('&', 'and')} ${business.location.display_address}&num=20&gbv=1`, {
             headers: {
                 'Accept-Encoding': 'gzip, deflate, br',
@@ -103,18 +104,19 @@ export const search = async (req: Request<unknown, unknown, unknown, {name: stri
             }
         });
         const $ = cheerio.load(search.data);
-        business.googleRating = Number($('div.BNeawe.tAd8D.AP7Wnd span.oqSTJd').text());
-        if (business.googleRating === 0) {
-            business.googleRating = null;
+        if (Number($('div.BNeawe.tAd8D.AP7Wnd span.oqSTJd').text()) !== 0) {
+            const rating = Number($('div.BNeawe.tAd8D.AP7Wnd span.oqSTJd').text());
+            const count = Number($('div.Bneawe.s3v9rd.AP7Wnd span:contains("(")').text().replace(/[^0-9]/g, ''));
+            business.ratings.Google = { rating: rating, count: count };
         }
         $('div.Gx5Zad.fP1Qef.xpd.EtOod.pkphOe').each((i, el) => {
             if ($(el).find('a').attr('href')?.includes('/Restaurant_Review')) {
-                business.tripAdvisorRating = Number($(el).find('span.oqSTJd').text());
-                if (business.tripAdvisorRating === 0) {
-                    business.tripAdvisorRating = null;
+                if (Number($(el).find('span.oqSTJd').text()) !== 0) {
+                    business.ratings.Tripadvisor = Number($(el).find('span.oqSTJd').text());
                 }
             }
         });
+        business.rating = Object.values(business.ratings).reduce((acc, rating) => acc + rating, 0) / Object.values(business.ratings).length;
         //Google search is done synchronously and delayed to avoid getting blocked
         setTimeout(() => {}, Math.random() * (5000-3000+1) + 3000);
     }

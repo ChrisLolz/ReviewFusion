@@ -15,8 +15,7 @@ interface Business {
         display_address: string[],
     },
     distance: number
-    googleRating: number,
-    tripAdvisorRating: number
+    ratings: Record<string, number>;
 }
 
 const getBusinesses = async (name: string | null, location: string | null, longitude: number | null, latitude: number | null, offset: number) => {
