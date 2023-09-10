@@ -5,12 +5,13 @@ interface Business {
     name: string,
     image_url: string,
     rating: number,
+    review_count: number,
     price: string,
     location: {
         display_address: string[],
     },
     distance: number,
-    ratings: Record<string, number>;
+    ratings: Record<string, {rating: number, count: number}>;
 }
 
 const Result = ( { business }: {business: Business} ) => {
@@ -21,9 +22,9 @@ const Result = ( { business }: {business: Business} ) => {
                 <h3>{business.name}</h3>
                 <div className='rating'>
                     <div id="rating"> Average: {business.rating} stars</div>
-                    <div id='yelp-rating'>Yelp: {business.ratings.Yelp} stars</div>
-                    {business.ratings.Google && <div id='google-rating'>Google: {business.ratings.Google} stars</div>}
-                    {business.ratings.Tripadvisor && <div id='tripadvisor-rating'>TripAdvisor: {business.ratings.Tripadvisor} stars</div>}
+                    <div id='yelp-rating'>Yelp: {business.ratings.Yelp.rating} stars &#40;{business.ratings.Yelp.count}&#41;</div>
+                    {business.ratings.Google && <div id='google-rating'>Google: {business.ratings.Google.rating} stars &#40;{business.ratings.Google.count}&#41;</div>}
+                    {business.ratings.Tripadvisor && <div id='tripadvisor-rating'>TripAdvisor: {business.ratings.Tripadvisor.rating} stars &#40;{business.ratings.Tripadvisor.count}&#41;</div>}
                 </div>
                 <div className='price'>{business.price}</div>
                 <div className='location'>{business.location.display_address.join(', ')}</div>

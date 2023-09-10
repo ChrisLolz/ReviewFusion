@@ -106,18 +106,21 @@ export const search = async (req: Request<unknown, unknown, unknown, {name: stri
         const $ = cheerio.load(search.data);
         if (Number($('div.BNeawe.tAd8D.AP7Wnd span.oqSTJd').text()) !== 0) {
             const rating = Number($('div.BNeawe.tAd8D.AP7Wnd span.oqSTJd').text());
-            const count = Number($('div.Bneawe.s3v9rd.AP7Wnd span:contains("(")').text().replace(/[^0-9]/g, ''));
+            const count = Number($('div.BNeawe.tAd8D.AP7Wnd span:nth-child(6)').text().replace(/[^0-9]/g, ''));
             business.ratings.Google = { rating: rating, count: count };
         }
         $('div.Gx5Zad.fP1Qef.xpd.EtOod.pkphOe').each((i, el) => {
             if ($(el).find('a').attr('href')?.includes('/Restaurant_Review')) {
                 if (Number($(el).find('span.oqSTJd').text()) !== 0) {
-                    business.ratings.Tripadvisor = Number($(el).find('span.oqSTJd').text());
+                    const rating = Number($(el).find('span.oqSTJd').text());
+                    const count = Number($(el).find('span:nth-child(6)').text().replace(/[^0-9]/g, ''));
+                    business.ratings.Tripadvisor = { rating: rating, count: count };
                 }
             }
         });
-        business.rating = Object.values(business.ratings).reduce((acc, rating) => acc + rating, 0) / Object.values(business.ratings).length;
-        //Google search is done synchronously and delayed to avoid getting blocked
+        business.review_count = Object.values(business.ratings).reduce((acc, key) => acc + key.count, 0);
+        business.rating = Object.values(business.ratings).reduce((acc, key) => acc + key.rating * key.count, 0) / business.review_count;
+        //Google search is done synchronously and is delayed to avoid getting blocked
         setTimeout(() => {}, Math.random() * (5000-3000+1) + 3000);
     }
     response.data.total = response.data.total > 990 ? 990 : response.data.total;
