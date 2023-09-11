@@ -25,7 +25,7 @@ const Results = () => {
     const { data, isLoading, error } = useQuery(
         ['businesses', name, location, longitude, latitude, offset], 
         () => restaurantService.getBusinesses(name, location, longitude, latitude, offset),
-        { staleTime: Infinity, retry: 1 }
+        { staleTime: Infinity, retry: false, refetchOnReconnect: false, refetchOnWindowFocus: false, refetchOnMount: false }
     );
 
     return (

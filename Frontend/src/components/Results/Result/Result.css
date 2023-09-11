@@ -15,3 +15,26 @@
 .result h3 {
     margin: 0;
 }
+
+.stars {
+    position: relative;
+    vertical-align: middle;
+    display: inline-block;
+    color: #ccc;
+    overflow: hidden;
+}
+
+.full-stars {
+    position: absolute;
+    left: 0;
+    top: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    color: #fde16d;
+}
+
+.empty-stars:before, .full-stars:before {
+    content: "\2605\2605\2605\2605\2605";
+    font-size: 1.8rem;
+    line-height: 1rem;
+}

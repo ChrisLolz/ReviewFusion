@@ -93,7 +93,7 @@ export const search = async (req: Request<unknown, unknown, unknown, {name: stri
     const latitude = req.query.latitude || "";
     const location = req.query.location || "";
     const offset = req.query.offset > 990 ? 990 : req.query.offset;
-    const response = await axios.get<YelpResponse>(api+`/businesses/search?location=${location}&longitude=${longitude}&latitude=${latitude}&term=${name}&sort_by=best_match&limit=10&offset=${offset}`, options);
+    const response = await axios.get<YelpResponse>(api+`/businesses/search?locale=en_CA&location=${location}&longitude=${longitude}&latitude=${latitude}&term=${name}&sort_by=best_match&limit=10&offset=${offset}`, options);
     for (let i=0; i<response.data.businesses.length; i++) {
         const business = response.data.businesses[i];
         business.ratings = { Yelp: {rating: business.rating, count: business.review_count} };
@@ -101,6 +101,7 @@ export const search = async (req: Request<unknown, unknown, unknown, {name: stri
             headers: {
                 'Accept-Encoding': 'gzip, deflate, br',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+                'Language': 'en-US,en;q=0.9'
             }
         });
         const $ = cheerio.load(search.data);
@@ -119,7 +120,7 @@ export const search = async (req: Request<unknown, unknown, unknown, {name: stri
             }
         });
         business.review_count = Object.values(business.ratings).reduce((acc, key) => acc + key.count, 0);
-        business.rating = Object.values(business.ratings).reduce((acc, key) => acc + key.rating * key.count, 0) / business.review_count;
+        business.rating = Number((Object.values(business.ratings).reduce((acc, key) => acc + key.rating * key.count, 0) / business.review_count).toFixed(1));
         //Google search is done synchronously and is delayed to avoid getting blocked
         setTimeout(() => {}, Math.random() * (5000-3000+1) + 3000);
     }

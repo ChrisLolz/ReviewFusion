@@ -10,12 +10,13 @@ interface Business {
     name: string,
     image_url: string,
     rating: number,
+    review_count: number,
     price: string,
     location: {
         display_address: string[],
     },
-    distance: number
-    ratings: Record<string, number>;
+    distance: number,
+    ratings: Record<string, {rating: number, count: number}>;
 }
 
 const getBusinesses = async (name: string | null, location: string | null, longitude: number | null, latitude: number | null, offset: number) => {
