@@ -4,16 +4,25 @@
     border-bottom: 0.1rem solid #c4bebd8f;
 }
 
+.result h3 {
+    margin-top: 0;
+}
+
+.business-content > * {
+    margin-bottom: 0.5rem;
+}
+
+.business-content .rating > * {
+    margin-bottom: 0.5rem;
+}
+
 .result img {
     width: 15rem;
     height: 15rem;
     object-fit: cover;
     margin-right: 1rem;
     border-radius: 0.3rem;
-}
 
-.result h3 {
-    margin: 0;
 }
 
 .stars {
@@ -35,6 +44,22 @@
 
 .empty-stars:before, .full-stars:before {
     content: "\2605\2605\2605\2605\2605";
-    font-size: 1.8rem;
-    line-height: 1rem;
+    font-size: 1.5rem;
+    line-height: 1.5rem;
+}
+
+.average {
+    vertical-align: middle;
+}
+
+.source img {
+    width: 3rem;
+    height: 1.5rem;
+    margin-right: 0.5rem;
+    object-fit: contain;
+}
+
+.source {
+    display: flex;
+    align-items: center;
 }

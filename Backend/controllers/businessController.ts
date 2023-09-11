@@ -97,7 +97,7 @@ export const search = async (req: Request<unknown, unknown, unknown, {name: stri
     for (let i=0; i<response.data.businesses.length; i++) {
         const business = response.data.businesses[i];
         business.ratings = { Yelp: {rating: business.rating, count: business.review_count} };
-        const search = await axios.get<string>(`https://google.com/search?q=${business.name.replace('&', 'and')} ${business.location.display_address}&num=20&gbv=1`, {
+        const search = await axios.get<string>(`https://google.com/search?q=${business.name.replace('&', 'and')} ${business.location.address1}&num=20&gbv=1`, {
             headers: {
                 'Accept-Encoding': 'gzip, deflate, br',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
