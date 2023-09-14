@@ -1,4 +1,5 @@
 import './Result.css'
+import { Link } from 'react-router-dom';
 
 interface Business {
     id: string,
@@ -24,7 +25,7 @@ const Result = ( { business }: {business: Business} ) => {
         <li className='result'>
             <img src={business.image_url} alt={business.name} />
             <div className='business-content'>
-                <h3>{business.name}</h3>
+                <h3><Link to="/">{business.name}</Link></h3>
                 <div className='rating'>
                     <div>
                         <div className='stars'>
@@ -38,14 +39,14 @@ const Result = ( { business }: {business: Business} ) => {
                     ))}</div>
                     <div className='source'>
                         <img src='https://i.imgur.com/gF0P3T4.png'/> 
-                        {business.ratings.Yelp.rating} &#40;{business.ratings.Yelp.count}&#41;
+                        {business.ratings.Yelp.rating.toFixed(1)} &#40;{business.ratings.Yelp.count}&#41;
                     </div>
                     {business.ratings.Google && <div className='source'> 
-                        <img src='https://i.imgur.com/9DLbDnw.png'/>{business.ratings.Google.rating} &#40;{business.ratings.Google.count}&#41;
+                        <img src='https://i.imgur.com/9DLbDnw.png'/>{business.ratings.Google.rating.toFixed(1)} &#40;{business.ratings.Google.count}&#41;
                     </div>}
                     {business.ratings.Tripadvisor && <div className='source'>
                         <img src='https://i.imgur.com/5dzgYPt.png'/>
-                        {business.ratings.Tripadvisor.rating} &#40;{business.ratings.Tripadvisor.count}&#41;
+                        {business.ratings.Tripadvisor.rating.toFixed(1)} &#40;{business.ratings.Tripadvisor.count}&#41;
                     </div>}
                 </div>
                 <div className='location'>{business.location.display_address.join(', ')}</div>

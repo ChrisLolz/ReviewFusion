@@ -8,6 +8,10 @@
     margin-top: 0;
 }
 
+.result a {
+    color: black;
+}
+
 .business-content > * {
     margin-bottom: 0.5rem;
 }

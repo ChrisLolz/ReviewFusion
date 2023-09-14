@@ -15,6 +15,10 @@ interface Business {
     location: {
         display_address: string[],
     },
+    categories: {
+        alias: string,
+        title: string,
+    }[],
     distance: number,
     ratings: Record<string, {rating: number, count: number}>;
 }

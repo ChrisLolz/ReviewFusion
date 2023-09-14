@@ -120,7 +120,8 @@ export const search = async (req: Request<unknown, unknown, unknown, {name: stri
             }
         });
         business.review_count = Object.values(business.ratings).reduce((acc, key) => acc + key.count, 0);
-        business.rating = Number((Object.values(business.ratings).reduce((acc, key) => acc + key.rating * key.count, 0) / business.review_count).toFixed(1));
+        business.rating = Number(Object.values(business.ratings).reduce((acc, key) => acc + key.rating * key.count, 0) / business.review_count);
+        business.rating = Math.round(business.rating * 10) / 10;
         //Google search is done synchronously and is delayed to avoid getting blocked
         setTimeout(() => {}, Math.random() * (5000-3000+1) + 3000);
     }

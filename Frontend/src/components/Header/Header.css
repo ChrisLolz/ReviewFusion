@@ -19,11 +19,6 @@ Header h1 a {
     font-size: 2.5rem;
     color: #CD533B;
     margin: 0;
-    text-decoration: none;
-}
-
-Header h1 a:hover {
-    text-decoration: underline;
 }
 
 Header button {
