@@ -32,7 +32,7 @@ const Results = () => {
         <main id="results">
             <Filter />
             <section>
-                <h2>Results for {location ?? 'Current Location'}</h2>
+                <h2>Results in {location ?? 'Current Location'}</h2>
                 {isLoading && <div>Loading...</div>}
                 {error instanceof Error && <div>Error: something went wrong</div>}
                 {data && <ul>

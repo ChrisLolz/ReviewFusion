@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import './Result.css'
 import { Link } from 'react-router-dom';
 
@@ -25,7 +26,7 @@ const Result = ( { business }: {business: Business} ) => {
         <li className='result'>
             <img src={business.image_url} alt={business.name} />
             <div className='business-content'>
-                <h3><Link to="/">{business.name}</Link></h3>
+                <h3><Link to={'/business/'+business.id}>{business.name}</Link></h3>
                 <div className='rating'>
                     <div>
                         <div className='stars'>

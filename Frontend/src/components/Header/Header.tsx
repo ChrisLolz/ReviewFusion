@@ -8,7 +8,7 @@ const Header = () => {
     return (
         <header>
             <h1><Link to="/">Review-Fusion</Link></h1>
-            {url.pathname === '/search' && <SearchBar/>}
+            {url.pathname !== '/' && <SearchBar/>}
             <nav>
                 <button type='button' id='sign-in'>Sign in</button>
                 <button type='button' id='sign-up'>Sign up</button>

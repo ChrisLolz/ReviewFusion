@@ -29,6 +29,7 @@ interface YelpBusiness {
     id: string,
     name: string,
     image_url: string,
+    photos: string[],
     rating: number,
     review_count: number,
     price: string,
@@ -37,6 +38,11 @@ interface YelpBusiness {
         address1: string;
         city: string;
     },
+    categories: {
+        alias: string,
+        title: string,
+    }[],
+    display_phone: string,
     ratings: Record<string, {rating: number, count: number}>,
 }
 
@@ -46,15 +52,6 @@ interface YelpResponse {
 }
 
 interface yelpApi {
-    filters: {
-        languageCode: string;
-        query: string;
-        sortType: string;
-    }
-    reviewLanguages: {
-        code: string;
-        count: number;
-    }[]
     pagination: {
         resultsPerPage: number;
         startResult: number;
@@ -66,14 +63,10 @@ interface yelpApi {
 interface yelpReview {
     id: string;
     user: {
-        link: string;
-        src: string;
-        srcSet: string;
         markupDisplayName: string;
     }
     comment: {
         text: string;
-        language: string;
     }
     localizedDate: string;
     rating: number;
@@ -81,8 +74,6 @@ interface yelpReview {
         src: string;
         link: string;
         altText: string;
-        width: number;
-        height: number;
         caption: string;
     }[]
 }
@@ -96,37 +87,75 @@ export const search = async (req: Request<unknown, unknown, unknown, {name: stri
     const response = await axios.get<YelpResponse>(api+`/businesses/search?locale=en_CA&location=${location}&longitude=${longitude}&latitude=${latitude}&term=${name}&sort_by=best_match&limit=10&offset=${offset}`, options);
     for (let i=0; i<response.data.businesses.length; i++) {
         const business = response.data.businesses[i];
-        business.ratings = { Yelp: {rating: business.rating, count: business.review_count} };
-        const search = await axios.get<string>(`https://google.com/search?q=${business.name.replace('&', 'and')} ${business.location.address1}&num=20&gbv=1`, {
-            headers: {
-                'Accept-Encoding': 'gzip, deflate, br',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
-                'Language': 'en-US,en;q=0.9'
-            }
-        });
-        const $ = cheerio.load(search.data);
-        if (Number($('div.BNeawe.tAd8D.AP7Wnd span.oqSTJd').text()) !== 0) {
-            const rating = Number($('div.BNeawe.tAd8D.AP7Wnd span.oqSTJd').text());
-            const count = Number($('div.BNeawe.tAd8D.AP7Wnd span:nth-child(6)').text().replace(/[^0-9]/g, ''));
-            business.ratings.Google = { rating: rating, count: count };
-        }
-        $('div.Gx5Zad.fP1Qef.xpd.EtOod.pkphOe').each((i, el) => {
-            if ($(el).find('a').attr('href')?.includes('/Restaurant_Review')) {
-                if (Number($(el).find('span.oqSTJd').text()) !== 0) {
-                    const rating = Number($(el).find('span.oqSTJd').text());
-                    const count = Number($(el).find('span:nth-child(6)').text().replace(/[^0-9]/g, ''));
-                    business.ratings.Tripadvisor = { rating: rating, count: count };
+        const databaseBusiness = await Business.findOne({yelpId: business.id});
+        if (databaseBusiness && (Date.now() - databaseBusiness.lastUpdated.getTime()) < 604800000) {
+            business.id = databaseBusiness._id.toString();
+            business.rating = databaseBusiness.rating;
+            business.review_count = databaseBusiness.review_count;
+            business.ratings = databaseBusiness.ratings;
+        } else {
+            const newBusiness = await Business.findById(databaseBusiness?._id) ?? await addBusiness(business);
+            newBusiness.lastUpdated = new Date();
+            business.id = newBusiness._id.toString();
+            business.ratings = { Yelp: {rating: business.rating, count: business.review_count} };
+            newBusiness.ratings = { Yelp: {rating: business.rating, count: business.review_count} };
+
+            const search = await axios.get<string>(`https://google.com/search?q=${business.name.replace('&', 'and')} ${business.location.address1}&num=20&gbv=1`, {
+                headers: {
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+                    'Language': 'en-US,en;q=0.9'
                 }
+            });
+            const $ = cheerio.load(search.data);
+
+            if (Number($('div.BNeawe.tAd8D.AP7Wnd span.oqSTJd').text()) !== 0) {
+                const rating = Number($('div.BNeawe.tAd8D.AP7Wnd span.oqSTJd').text());
+                const count = Number($('div.BNeawe.tAd8D.AP7Wnd span:nth-child(6)').text().replace(/[^0-9]/g, ''));
+                business.ratings.Google = { rating: rating, count: count };
+                newBusiness.ratings.Google = { rating: rating, count: count };
             }
-        });
-        business.review_count = Object.values(business.ratings).reduce((acc, key) => acc + key.count, 0);
-        business.rating = Number(Object.values(business.ratings).reduce((acc, key) => acc + key.rating * key.count, 0) / business.review_count);
-        business.rating = Math.round(business.rating * 10) / 10;
-        //Google search is done synchronously and is delayed to avoid getting blocked
-        setTimeout(() => {}, Math.random() * (5000-3000+1) + 3000);
+
+            $('div.Gx5Zad.fP1Qef.xpd.EtOod.pkphOe').each((i, el) => {
+                if ($(el).find('a').attr('href')?.includes('/Restaurant_Review')) {
+                    if (Number($(el).find('span.oqSTJd').text()) !== 0) {
+                        const rating = Number($(el).find('span.oqSTJd').text());
+                        const count = Number($(el).find('span:nth-child(6)').text().replace(/[^0-9]/g, ''));
+                        business.ratings.Tripadvisor = { rating: rating, count: count };
+                        newBusiness.ratings.Tripadvisor = { rating: rating, count: count };
+                    }
+                }
+            });
+            
+            business.review_count = Object.values(business.ratings).reduce((acc, key) => acc + key.count, 0);
+            business.rating = Number(Object.values(business.ratings).reduce((acc, key) => acc + key.rating * key.count, 0) / business.review_count);
+            business.rating = Math.round(business.rating * 10) / 10;
+            newBusiness.rating = business.rating;
+            newBusiness.review_count = business.review_count;
+            newBusiness.categories = business.categories.map(category => category.title);
+            await newBusiness.save();
+            //Google search is done synchronously and is delayed to avoid getting blocked
+            setTimeout(() => {}, Math.random() * (5000-3000+1) + 3000);
+        }
     }
     response.data.total = response.data.total > 990 ? 990 : response.data.total;
-    res.status(200).json(response.data);
+    res.status(201).json(response.data);
+};
+
+export const addBusinessDetails = async (req: Request, res: Response) => {
+    const business = await Business.findById(req.params.id);
+    if (business === null) {
+        res.status(404).end();
+        return;
+    }
+    if (business.images.length > 0) { //Don't need to add images if they already exist
+        res.status(201).end();
+        return;
+    }
+    const response = await axios.get<YelpBusiness>(api+`/businesses/${business.yelpId}`, options);
+    business.images.push(...response.data.photos);
+    await business.save();
+    res.status(201).end();
 };
 
 export const getBusinesses =  async (req: Request, res: Response) => {
@@ -174,29 +203,33 @@ export const getAverageRating = async (req: Request, res: Response) => {
     res.status(200).json(average[0].average);
 };
 
-export const addBusiness = async (req: Request<unknown, unknown, businessParams>, res: Response) => {
-    const name = req.body.name.replace(" ", "%20");
-    const location = req.body.location.replace(" ", "%20");
-    const URL = api+`/businesses/search?location=${location}&term=${name}&sort_by=best_match&limit=50`;
-    const response = await axios.get(URL, options);
-    const data = response.data as YelpResponse;
-    const yelpID = data.businesses[0].id;
+export const addReviews = async (req: Request, res: Response) => {
+    const business = await Business.findById(req.params.id);
+    if (business === null) {
+        res.status(404).end();
+        return;
+    }
+    const requests = [];
+    requests.push(addYelpBusiness(business?.yelpId, req.params.id));
+    requests.push(addGoogleBusiness(req.params.id));
+    requests.push(addTripAdvisorBusiness(req.params.id));
+    await Promise.all(requests);
+    res.status(201).end();
+};
+
+const addBusiness = async (yelpBusiness: YelpBusiness) => {
     const business = new Business({
-        name: data.businesses[0].name,
-        address: data.businesses[0].location.address1,
-        city: data.businesses[0].location.city,
-        image: data.businesses[0].image_url,
-        rating: [],
-        reviews: []
+        lastUpdated: new Date(),
+        yelpId: yelpBusiness.id,
+        name: yelpBusiness.name,
+        address: yelpBusiness.location.address1,
+        city: yelpBusiness.location.city,
+        image: yelpBusiness.image_url,
+        price: yelpBusiness.price,
+        phone: yelpBusiness.display_phone,
     });
     await business.save();
-    const mongoID = business._id.toString();
-    const requests = [];
-    requests.push(addYelpBusiness(yelpID, mongoID));
-    requests.push(addGoogleBusiness(mongoID));
-    requests.push(addTripAdvisorBusiness(mongoID));
-    await Promise.all(requests);
-    res.status(200).end();
+    return business;
 };
 
 const addYelpBusiness = async (yelpID: string, mongoID: string) => {
@@ -244,10 +277,7 @@ const addYelpBusiness = async (yelpID: string, mongoID: string) => {
     await Promise.all(requests);
     const reviews = await Review.find({business: business._id, source: "Yelp"});
     const rating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
-    business.ratings.push({
-        source: "Yelp",
-        rating: rating
-    });
+    business.ratings.Yelp = {rating: rating, count: reviews.length};
     await business.save();
 };
 
@@ -335,10 +365,7 @@ const addGoogleBusiness = async (mongoID: string) => {
     await Promise.all(requests);
     const reviews = await Review.find({business: business._id, source: "Google"});
     const rating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
-    business.ratings.push({
-        source: "Google",
-        rating: rating
-    });
+    business.ratings.Google = {rating: rating, count: reviews.length};
     await business.save();
 };
 
@@ -430,10 +457,7 @@ export const addTripAdvisorBusiness = async (mongoID: string) => {
     await Promise.all(reviewPromises);
     const reviews = await Review.find({business: business._id, source: "TripAdvisor"});
     const rating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
-    business.ratings.push({
-        source: "TripAdvisor",
-        rating: rating
-    });
+    business.ratings.TripAdvisor = {rating: rating, count: reviews.length};
     await business.save();
 };
 

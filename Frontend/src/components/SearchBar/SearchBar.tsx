@@ -11,7 +11,7 @@ const SearchBar = () => {
     const [restaurant, setRestaurant] = useState<string>('');
 
     useEffect(() => {
-        if (url.pathname === '/') {
+        if (url.pathname === '/' || url.pathname.includes('/business/')) {
             (async () => {
                 const result = await navigator.permissions.query({name:'geolocation'});
                 if (result.state === 'denied' || result.state === 'prompt') {
