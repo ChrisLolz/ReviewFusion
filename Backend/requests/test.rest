@@ -1,7 +1,2 @@
-POST http://localhost:3000/api/business/
+POST http://localhost:3000/api/business/6560ebb8342496e5a31db2e8/reviews
 Content-Type: application/json
-
-{
-    "name": "Katz's",
-    "location": "New York"
-}

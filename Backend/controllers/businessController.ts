@@ -126,7 +126,6 @@ export const search = async (req: Request<unknown, unknown, unknown, {name: stri
                     }
                 }
             });
-            
             business.review_count = Object.values(business.ratings).reduce((acc, key) => acc + key.count, 0);
             business.rating = Number(Object.values(business.ratings).reduce((acc, key) => acc + key.rating * key.count, 0) / business.review_count);
             business.rating = Math.round(business.rating * 10) / 10;
@@ -395,12 +394,11 @@ export const addTripAdvisorBusiness = async (mongoID: string) => {
     const requests = [];
     const reviewIds: string[] = [];
     for (let i=0; i<Math.ceil(reviewCount/15); i++) {
-
         const promise = (async () => {
             const response = await axios.get<string>(url+"-or"+i*15+".html", {
                 headers: {
                     "Accept-Encoding": "gzip, deflate, br",
-                    'User-Agent': randUserAgent('desktop'),
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
                     'Accept-Language': 'en-US,en;q=0.9',
                     'Origin': 'https://www.tripadvisor.ca',
                 }
@@ -417,7 +415,7 @@ export const addTripAdvisorBusiness = async (mongoID: string) => {
     response = await axios.post<string>("https://www.tripadvisor.ca/OverlayWidgetAjax?Mode=EXPANDED_HOTEL_REVIEWS_RESP&metaReferer=Restaurant_Review", data, {
         headers: {
             "Accept-Encoding": "gzip, deflate, br",
-            'User-Agent': 'PostmanRuntime/7.26.10',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
             'Origin': 'https://www.tripadvisor.ca',
         }

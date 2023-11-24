@@ -40,6 +40,16 @@ interface Business {
     ratings: Record<string, {rating: number, count: number}>
 }
 
+interface Review {
+    id: string;
+    source: string;
+    name: string;
+    date: string;
+    business: string;
+    rating: number;
+    comment: string;
+}
+
 const getBusinesses = async (name: string | null, location: string | null, longitude: number | null, latitude: number | null, offset: number) => {
     const res = await fetch(baseURL+`/search?name=${name}&location=${location}&longitude=${longitude}&latitude=${latitude}&offset=${offset}`, {method: 'POST'});
     return await res.json() as data;
@@ -51,4 +61,9 @@ const getBusiness = async (id: string) => {
     return await res.json() as Business;
 }
 
-export default { getBusinesses, getBusiness };
+const getReviews = async (id: string): Promise<Review[]> => {
+    const res = await fetch(baseURL+`/${id}/reviews`);
+    return await res.json() as Review[];
+}
+
+export default { getBusinesses, getBusiness, getReviews };

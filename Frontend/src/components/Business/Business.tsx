@@ -12,6 +12,12 @@ const Business = () => {
         { staleTime: Infinity, retry: false, refetchOnReconnect: false, refetchOnWindowFocus: false, refetchOnMount: false }
     );
 
+    const {data: reviews, isLoading: isLoadingReviews, error: errorReviews} = useQuery(
+        ['reviews', id],
+        () => restaurantService.getReviews(id),
+        { staleTime: Infinity, retry: false, refetchOnReconnect: false, refetchOnWindowFocus: false, refetchOnMount: false }
+    );
+
     return (
         <main id="business">
             {isLoading && <div>Loading...</div>}
@@ -38,6 +44,26 @@ const Business = () => {
                     <p>Address: {data.address}</p>
                 </div>
             </div>}
+            <div id="reviews">
+                <h2>Reviews</h2>
+                {isLoadingReviews && <div>Loading...</div>}\
+                {errorReviews instanceof Error && <div>Error: something went wrong</div>}
+                {reviews && <ul>
+                    {reviews.map((review) => <li key={review.id}>
+                        <div className='review'>
+                            <div className='review-header'>
+                                <div className='review-name'>{review.name}</div>
+                                <div className='review-date'>{review.date}</div>
+                            </div>
+                            <div className='review-stars'>
+                                <div className='empty-stars'/>
+                                <div className='full-stars' style={{width: `${review.rating / 5 * 100}%`}}/>
+                            </div>
+                            <div className='review-text'>{review.comment}</div>
+                        </div>
+                    </li>)}
+                </ul>}
+            </div>
         </main>
     )
 };
